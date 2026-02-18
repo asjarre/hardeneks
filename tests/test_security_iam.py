@@ -80,8 +80,17 @@ def test_check_endpoint_public_access(mocked_client):
     assert not rule.result.status
 
 
+@pytest.mark.parametrize(
+    "test_file,expected_status,expected_offender_count",
+    [
+        # Instances with proper config (hop limit = 1 and IMDSv2 required) - should pass
+        ("instance_metadata_pass.json", True, 0),
+        # Instances with issues (hop limit != 1 or IMDSv2 not required) - should fail
+        ("instance_metadata_fail.json", False, 2),
+    ],
+)
 @patch("boto3.client")
-def test_check_access_to_instance_profile(mocked_client):
+def test_check_access_to_instance_profile(mocked_client, test_file, expected_status, expected_offender_count):
     namespaced_resources = NamespacedResources(
         "some_region", "some_context", "some_cluster", "some_ns"
     )
@@ -91,7 +100,7 @@ def test_check_access_to_instance_profile(mocked_client):
         / "tests"
         / "data"
         / "check_access_to_instance_profile"
-        / "instance_metadata.json"
+        / test_file
     )
 
     mocked_client.return_value.describe_instances.return_value = read_json(
@@ -99,8 +108,12 @@ def test_check_access_to_instance_profile(mocked_client):
     )
     rule = check_access_to_instance_profile()
     rule.check(namespaced_resources)
-    resources = rule.result.resources
-    assert len(resources) == 2
+    
+    assert rule.result.status == expected_status
+    if expected_offender_count > 0:
+        assert len(rule.result.resources) == expected_offender_count
+    else:
+        assert rule.result.resources == [""]
 
 
 @pytest.mark.parametrize(

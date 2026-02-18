@@ -1,0 +1,20 @@
+{
+    "Reservations": [
+      {
+        "Groups": [],
+        "Instances": [
+          {
+            "InstanceId": "i-pass-1",
+            "MetadataOptions": {
+              "State": "applied",
+              "HttpTokens": "required",
+              "HttpPutResponseHopLimit": 1,
+              "HttpEndpoint": "enabled",
+              "HttpProtocolIpv6": "disabled",
+              "InstanceMetadataTags": "disabled"
+            }
+          }
+        ]
+      }
+    ]
+  }

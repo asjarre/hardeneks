@@ -117,7 +117,7 @@ class check_access_to_instance_profile(Rule):
     pillar = "security"
     section = "iam"
     message = "Restrict access to the instance profile assigned to nodes."
-    url = "https://aws.github.io/aws-eks-best-practices/security/docs/iam/#when-your-application-needs-access-to-imds-use-imdsv2-and-increase-the-hop-limit-on-ec2-instances-to-2"
+    url = "https://aws.github.io/aws-eks-best-practices/security/docs/iam/#restrict-access-to-the-instance-profile-assigned-to-the-worker-node"
 
     def check(self, resources: Resources):
         client = boto3.client("ec2", region_name=resources.region)
@@ -135,12 +135,11 @@ class check_access_to_instance_profile(Rule):
         )
 
         for instance in instance_metadata["Reservations"]:
-            if (
-                instance["Instances"][0]["MetadataOptions"][
-                    "HttpPutResponseHopLimit"
-                ]
-                == 2
-            ):
+            metadata_options = instance["Instances"][0]["MetadataOptions"]
+            hop_limit = metadata_options["HttpPutResponseHopLimit"]
+            http_tokens = metadata_options.get("HttpTokens", "optional")
+            
+            if hop_limit != 1 or http_tokens != "required":
                 offenders.append(instance)
 
         self.result = Result(status=True, resource_type="Node")

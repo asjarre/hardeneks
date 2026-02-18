@@ -1,0 +1,36 @@
+{
+    "Reservations": [
+      {
+        "Groups": [],
+        "Instances": [
+          {
+            "InstanceId": "i-fail-1",
+            "MetadataOptions": {
+              "State": "applied",
+              "HttpTokens": "optional",
+              "HttpPutResponseHopLimit": 1,
+              "HttpEndpoint": "enabled",
+              "HttpProtocolIpv6": "disabled",
+              "InstanceMetadataTags": "disabled"
+            }
+          }
+        ]
+      },
+      {
+        "Groups": [],
+        "Instances": [
+          {
+            "InstanceId": "i-fail-2",
+            "MetadataOptions": {
+              "State": "applied",
+              "HttpTokens": "required",
+              "HttpPutResponseHopLimit": 2,
+              "HttpEndpoint": "enabled",
+              "HttpProtocolIpv6": "disabled",
+              "InstanceMetadataTags": "disabled"
+            }
+          }
+        ]
+      }
+    ]
+  }
