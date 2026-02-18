@@ -123,7 +123,8 @@ class check_access_to_instance_profile(Rule):
         client = boto3.client("ec2", region_name=resources.region)
         offenders = []
 
-        instance_metadata = client.describe_instances(
+        paginator = client.get_paginator('describe_instances')
+        page_iterator = paginator.paginate(PaginationConfig={'PageSize': 1000},
             Filters=[
                 {
                     "Name": "tag:aws:eks:cluster-name",
@@ -134,13 +135,14 @@ class check_access_to_instance_profile(Rule):
             ]
         )
 
-        for instance in instance_metadata["Reservations"]:
-            metadata_options = instance["Instances"][0]["MetadataOptions"]
-            hop_limit = metadata_options["HttpPutResponseHopLimit"]
-            http_tokens = metadata_options.get("HttpTokens", "optional")
-            
-            if hop_limit != 1 or http_tokens != "required":
-                offenders.append(instance)
+        for page in page_iterator:
+            for reservation in page["Reservations"]:
+                metadata_options = reservation["Instances"][0]["MetadataOptions"]
+                hop_limit = metadata_options["HttpPutResponseHopLimit"]
+                http_tokens = metadata_options.get("HttpTokens", "optional")
+                
+                if hop_limit != 1 or http_tokens != "required":
+                    offenders.append(reservation)
 
         self.result = Result(status=True, resource_type="Node")
 
