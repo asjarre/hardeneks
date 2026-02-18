@@ -71,7 +71,6 @@ class use_efs_access_points(Rule):
     url = "https://aws.github.io/aws-eks-best-practices/security/docs/data/#use-efs-access-points-to-simplify-access-to-shared-datasets"
 
     def check(self, resources: Resources):
-
         offenders = []
 
         for persistent_volume in resources.persistent_volumes:
