@@ -6,7 +6,7 @@
             "kind": "PersistentVolume",
             "metadata": {
                 "annotations": {
-                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"PersistentVolume\",\"metadata\":{\"annotations\":{},\"name\":\"bad\"},\"spec\":{\"accessModes\":[\"ReadWriteOnce\"],\"capacity\":{\"storage\":\"5Gi\"},\"csi\":{\"driver\":\"efs.csi.aws.com\",\"volumeHandle\":\"some_id\"},\"persistentVolumeReclaimPolicy\":\"Retain\",\"storageClassName\":\"efs-sc\",\"volumeMode\":\"Filesystem\"}}\n"
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"PersistentVolume\",\"metadata\":{\"annotations\":{},\"name\":\"bad\"},\"spec\":{\"accessModes\":[\"ReadWriteOnce\"],\"capacity\":{\"storage\":\"5Gi\"},\"csi\":{\"driver\":\"efs.csi.aws.com\",\"volumeHandle\":\"some_id\",\"volumeAttributes\":{\"encryptInTransit\":\"false\"}},\"persistentVolumeReclaimPolicy\":\"Retain\",\"storageClassName\":\"efs-sc\",\"volumeMode\":\"Filesystem\"}}\n"
                 },
                 "creationTimestamp": "2022-11-16T17:32:05Z",
                 "finalizers": [
@@ -25,7 +25,10 @@
                 },
                 "csi": {
                     "driver": "efs.csi.aws.com",
-                    "volumeHandle": "some_id"
+                    "volumeHandle": "some_id",
+                    "volumeAttributes": {
+                        "encryptInTransit": "false"
+                    }
                 },
                 "persistentVolumeReclaimPolicy": "Retain",
                 "storageClassName": "efs-sc",
@@ -40,7 +43,7 @@
             "kind": "PersistentVolume",
             "metadata": {
                 "annotations": {
-                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"PersistentVolume\",\"metadata\":{\"annotations\":{},\"name\":\"good\"},\"spec\":{\"accessModes\":[\"ReadWriteOnce\"],\"capacity\":{\"storage\":\"5Gi\"},\"csi\":{\"driver\":\"efs.csi.aws.com\",\"volumeHandle\":\"some_id\"},\"mountOptions\":[\"tls\"],\"persistentVolumeReclaimPolicy\":\"Retain\",\"storageClassName\":\"efs-sc\",\"volumeMode\":\"Filesystem\"}}\n"
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"PersistentVolume\",\"metadata\":{\"annotations\":{},\"name\":\"good\"},\"spec\":{\"accessModes\":[\"ReadWriteOnce\"],\"capacity\":{\"storage\":\"5Gi\"},\"csi\":{\"driver\":\"efs.csi.aws.com\",\"volumeHandle\":\"some_id\",\"volumeAttributes\":{\"encryptInTransit\":\"true\"}},\"persistentVolumeReclaimPolicy\":\"Retain\",\"storageClassName\":\"efs-sc\",\"volumeMode\":\"Filesystem\"}}\n"
                 },
                 "creationTimestamp": "2022-11-16T17:32:05Z",
                 "finalizers": [
@@ -59,11 +62,11 @@
                 },
                 "csi": {
                     "driver": "efs.csi.aws.com",
-                    "volumeHandle": "some_id"
+                    "volumeHandle": "some_id",
+                    "volumeAttributes": {
+                        "encryptInTransit": "true"
+                    }
                 },
-                "mountOptions": [
-                    "tls"
-                ],
                 "persistentVolumeReclaimPolicy": "Retain",
                 "storageClassName": "efs-sc",
                 "volumeMode": "Filesystem"
