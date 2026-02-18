@@ -78,13 +78,14 @@ class check_aws_node_daemonset_service_account(Rule):
         daemonset = client.AppsV1Api().read_namespaced_daemon_set(
             name="aws-node", namespace="kube-system"
         )
-        self.result = Result(status=False, resources=["aws-node"], resource_type="Daemonset")
         v1 = client.CoreV1Api()
         service_account_name = daemonset.spec.template.spec.service_account_name
         service_account = v1.read_namespaced_service_account(
             name=service_account_name,
             namespace="kube-system",
         )
+
+        self.result = Result(status=False, resources=["aws-node"], resource_type="Daemonset")
 
         # Check for Pod Identity
         try:
