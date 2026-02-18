@@ -175,6 +175,7 @@ class disable_anonymous_access_for_cluster_roles(Rule):
                         or subject.name == "system:anonymous"
                     ):
                         offenders.append(cluster_role_binding)
+                        break
 
         self.result = Result(status=True, resource_type="ClusterRoleBinding")
         if offenders:
