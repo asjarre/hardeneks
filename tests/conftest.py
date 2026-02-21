@@ -29,7 +29,7 @@ def resources(request):
         "some_region",
         "some_context",
         "some_cluster",
-        ["good", "bad", "default"],
+        ["good", "good2", "bad", "default"],
     )
     resources.resource_quotas = get_response(
         client.CoreV1Api,

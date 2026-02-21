@@ -68,7 +68,7 @@ def test_check_vpc_flow_logs(mocked_client):
 def test_check_default_deny_policy_exists(resources):
     rule = check_default_deny_policy_exists()
     rule.check(resources)
-    assert ["good", "bad", "default"] == rule.result.resources
+    assert sorted(["bad", "default"]) == sorted(rule.result.resources)
 
 
 @patch("kubernetes.client.CoreV1Api.list_service_for_all_namespaces")
