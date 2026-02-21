@@ -57,8 +57,6 @@ class check_any_cluster_autoscaler_exists(Rule):
         else:
             self.result = Result(status=True, resource_type="Deployment")
 
-        return self.result
-
 
 class ensure_cluster_autoscaler_and_cluster_versions_match(Rule):
     _type = "cluster_wide"
@@ -86,7 +84,7 @@ class ensure_cluster_autoscaler_and_cluster_versions_match(Rule):
                 ca_image_version = ca_image.split(":")[-1]
                 if cluster_version not in ca_image_version:
                     self.result = Result(status=False, resources=[deployment.metadata.name], resource_type="Deployment")
-                break
+                return
 
 
 class ensure_cluster_autoscaler_has_autodiscovery_mode(Rule):
