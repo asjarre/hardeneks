@@ -51,10 +51,9 @@ class check_any_cluster_autoscaler_exists(Rule):
             .list_deployment_for_all_namespaces()
             .items
         ]
-        if not (
-            "cluster-autoscaler" in deployments or "karpenter" in deployments
-        ):
-            self.result = Result(status=False, resource_type="Deployment")
+        
+        if not any(keyword in d for d in deployments for keyword in ["cluster-autoscaler", "karpenter"]):
+            self.result = Result(status=False, resource=["cluster-autoscaler,karpenter"], resource_type="Deployment")
         else:
             self.result = Result(status=True, resource_type="Deployment")
 
