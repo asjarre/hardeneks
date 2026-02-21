@@ -53,7 +53,7 @@ class check_any_cluster_autoscaler_exists(Rule):
         ]
         
         if not any(keyword in d for d in deployments for keyword in ["cluster-autoscaler", "karpenter"]):
-            self.result = Result(status=False, resource=["cluster-autoscaler,karpenter"], resource_type="Deployment")
+            self.result = Result(status=False, resources=["cluster-autoscaler,karpenter"], resource_type="Deployment")
         else:
             self.result = Result(status=True, resource_type="Deployment")
 
@@ -64,9 +64,7 @@ class ensure_cluster_autoscaler_and_cluster_versions_match(Rule):
     _type = "cluster_wide"
     pillar = "cluster_autoscaling"
     section = "cluster_autoscaler"
-    message = (
-        "Cross version compatibility between CA and k8s is not recommended."
-    )
+    message = "Cross version compatibility between CA and k8s is not recommended."
     url = "https://aws.github.io/aws-eks-best-practices/cluster-autoscaling/#operating-the-cluster-autoscaler"
 
     def check(self, resources):
@@ -82,14 +80,13 @@ class ensure_cluster_autoscaler_and_cluster_versions_match(Rule):
         self.result = Result(status=True, resource_type="Deployment")
 
         for deployment in deployments:
-            if deployment.metadata.name == "cluster-autoscaler":
+            if "cluster-autoscaler" in deployment.metadata.name:
                 ca_containers = deployment.spec.template.spec.containers
                 ca_image = ca_containers[0].image
                 ca_image_version = ca_image.split(":")[-1]
                 if cluster_version not in ca_image_version:
-                    self.result = Result(
-                        status=False, resource_type="Deployment"
-                    )
+                    self.result = Result(status=False, resources=[deployment.metadata.name], resource_type="Deployment")
+                break
 
 
 class ensure_cluster_autoscaler_has_autodiscovery_mode(Rule):
