@@ -168,11 +168,7 @@ class employ_least_privileged_access_cluster_autoscaler_role(Rule):
     url = "https://aws.github.io/aws-eks-best-practices/cluster-autoscaling/#employ-least-privileged-access-to-the-iam-role"
 
     def check(self, resources):
-
-        deployments = (
-            client.AppsV1Api().list_deployment_for_all_namespaces().items
-        )
-
+        deployments = client.AppsV1Api().list_deployment_for_all_namespaces().items
         iam_client = boto3.client("iam", region_name=resources.region)
 
         ACTIONS = {
@@ -180,7 +176,6 @@ class employ_least_privileged_access_cluster_autoscaler_role(Rule):
             "autoscaling:DescribeAutoScalingInstances",
             "autoscaling:DescribeLaunchConfigurations",
             "autoscaling:DescribeScalingActivities",
-            "autoscaling:DescribeTags",
             "ec2:DescribeImages",
             "ec2:DescribeInstanceTypes",
             "ec2:DescribeLaunchTemplateVersions",
@@ -191,39 +186,52 @@ class employ_least_privileged_access_cluster_autoscaler_role(Rule):
         }
         self.result = Result(status=True, resource_type="IAM Role Action")
 
+        role_arn = None
         for deployment in deployments:
-            if deployment.metadata.name == "cluster-autoscaler":
-                service_account = (
-                    deployment.spec.template.spec.service_account_name
-                )
-                sa_data = client.CoreV1Api().read_namespaced_service_account(
-                    service_account, "kube-system", pretty="true"
-                )
-                if (
-                    "eks.amazonaws.com/role-arn"
-                    not in sa_data.metadata.annotations.keys()
-                ):
-                    break
-                else:
+            if "cluster-autoscaler" in deployment.metadata.name:
+                service_account_name = deployment.spec.template.spec.service_account_name
+                sa_namespace = deployment.metadata.namespace
 
-                    sa_iam_role_arn = sa_data.metadata.annotations[
-                        "eks.amazonaws.com/role-arn"
-                    ]
-                    sa_iam_role = sa_iam_role_arn.split("/")[-1]
-                    actions = _get_policy_documents_for_role(
-                        sa_iam_role, iam_client
+                # Check for Pod Identity first
+                try:
+                    eks_client = boto3.client("eks", region_name=resources.region)
+                    pod_identity_associations = eks_client.list_pod_identity_associations(
+                        clusterName=resources.cluster
                     )
+                    
+                    for association in pod_identity_associations.get("associations", []):
+                        if (
+                            association.get("namespace") == sa_namespace
+                            and association.get("serviceAccount") == service_account_name
+                        ):
+                            describe_identity_association = eks_client.describe_pod_identity_association(
+                                clusterName=resources.cluster, associationId=association.get("associationId")
+                            )
+                            role_arn = describe_identity_association.get("association", {}).get("roleArn")
+                            break
+                except Exception:
+                    pass
 
-                    if len(set(actions) - ACTIONS) > 0:
-                        self.result = Result(
-                            status=False,
-                            resource_type="IAM Role Action",
-                            resources=(set(actions) - ACTIONS),
-                        )
-                    else:
-                        self.result = Result(
-                            status=True, resource_type="IAM Role Action"
-                        )
+                # If no Pod Identity, check IRSA
+                if not role_arn:
+                    sa_data = client.CoreV1Api().read_namespaced_service_account(
+                        service_account_name, sa_namespace
+                    )
+                    if sa_data.metadata.annotations:
+                        role_arn = sa_data.metadata.annotations.get("eks.amazonaws.com/role-arn")
+                break
+
+        # If we found a role (either Pod Identity or IRSA), check permissions
+        if role_arn:
+            role_name = role_arn.split("/")[-1]
+            actions = _get_policy_documents_for_role(role_name, iam_client)
+
+            if len(set(actions) - ACTIONS) > 0:
+                self.result = Result(
+                    status=False,
+                    resource_type="IAM Role Action",
+                    resources=list(set(actions) - ACTIONS),
+                )
 
 
 class use_managed_nodegroups(Rule):
