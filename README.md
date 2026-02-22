@@ -192,6 +192,11 @@ In order to run hardeneks we need to have some permissions both on AWS side and 
             "Effect": "Allow",
             "Action": "eks:DescribePodIdentityAssociation",
             "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "eks:DescribeClusterVersions",
+            "Resource": "*"
         }
     ]
 }

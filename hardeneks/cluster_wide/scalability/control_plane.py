@@ -1,4 +1,5 @@
 import re
+import boto3
 import kubernetes
 from hardeneks import helpers
 from hardeneks.rules import Rule, Result
@@ -9,25 +10,31 @@ class check_EKS_version(Rule):
     _type = "cluster_wide"
     pillar = "scalability"
     section = "control_plane"
-    message = "EKS Version Should be greater or equal to 1.24."
-    url = "https://aws.github.io/aws-eks-best-practices/scalability/docs/control-plane/#use-eks-124-or-above"
+    message = "EKS Version should be in standard support."
+    url = "https://aws.github.io/aws-eks-best-practices/scalability/docs/control-plane/"
 
     def check(self, resources: Resources):
-        client = kubernetes.client.VersionApi()
-        version = client.get_code()
-        minor = version.minor
+        eks_client = boto3.client("eks", region_name=resources.region)
 
-        if int(re.sub("[^0-9]", "", minor)) < 24:
+        cluster_version = eks_client.describe_cluster(name=resources.cluster)["cluster"]["version"]
+        # Get versions in standard support
+        cluster_versions_response = eks_client.describe_cluster_versions()
+        standard_support_versions = [
+            v["clusterVersion"] 
+            for v in cluster_versions_response.get("clusterVersions", [])
+            if v.get("versionStatus") == "STANDARD_SUPPORT"
+        ]
+
+        self.result = Result(status=True, resource_type="Cluster Version")
+
+        if cluster_version not in standard_support_versions:
             self.result = Result(
                 status=False,
-                resources=f"{version.major}.{minor}",
+                resources=[cluster_version],
                 resource_type="Cluster Version",
             )
-        else:
-            self.result = Result(status=True, resource_type="Cluster Version")
 
 
-#
 # check_kubectl_compression
 # checks all clusters in config for disable-compression flag set to true
 # if any cluster does not have setting, it returns False
