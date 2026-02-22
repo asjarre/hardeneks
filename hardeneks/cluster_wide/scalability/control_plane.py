@@ -56,7 +56,7 @@ class check_kubectl_compression(Rule):
                     )
                 ):
                     self.result = Result(
-                        status=False, resource_type="Compression Setting"
+                        status=False, resources=[resources.cluster],  resource_type="Compression Setting"
                     )
                 else:
                     self.result = Result(
