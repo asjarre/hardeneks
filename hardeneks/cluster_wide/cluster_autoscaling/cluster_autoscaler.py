@@ -21,19 +21,23 @@ def _get_policy_documents_for_role(role_name, iam_client):
             PolicyArn=policy_arn, VersionId=version_id
         )["PolicyVersion"]["Document"]["Statement"]
         for statement in response:
-            if type(statement["Action"]) == str:
-                actions.append(statement["Action"])
-            elif type(statement["Action"]) == list:
-                actions.extend(statement["Action"])
+            if statement.get("Effect") == "Allow":
+                action = statement.get("Action")
+                if isinstance(action, str):
+                    actions.append(action)
+                elif isinstance(action, list):
+                    actions.extend(action)
     for policy_name in inline_policies:
         response = iam_client.get_role_policy(
             RoleName=role_name, PolicyName=policy_name
         )["PolicyDocument"]["Statement"]
         for statement in response:
-            if type(statement["Action"]) == str:
-                actions.append(statement["Action"])
-            elif type(statement["Action"]) == list:
-                actions.extend(statement["Action"])
+            if statement.get("Effect") == "Allow":
+                action = statement.get("Action")
+                if isinstance(action, str):
+                    actions.append(action)
+                elif isinstance(action, list):
+                    actions.extend(action)
     return actions
 
 
