@@ -64,6 +64,9 @@ class NamespacedResources:
         self.services = (
             client.CoreV1Api().list_namespaced_service(self.namespace).items
         )
+        self.service_accounts = (
+            client.CoreV1Api().list_namespaced_service_account(self.namespace).items
+        )
         self.hpas = (
             client.AutoscalingV1Api()
             .list_namespaced_horizontal_pod_autoscaler(self.namespace)

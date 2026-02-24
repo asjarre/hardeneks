@@ -41,27 +41,28 @@ class disable_service_account_token_mounts(Rule):
     _type = "namespace_based"
     pillar = "security"
     section = "iam"
-    message = "Auto-mounting of Service Account tokens is not allowed."
+    message = "Default service account should have automountServiceAccountToken set to false."
     url = "https://aws.github.io/aws-eks-best-practices/security/docs/iam/#disable-auto-mounting-of-service-account-tokens"
 
     def check(self, namespaced_resources: NamespacedResources):
-
         offenders = []
 
-        for pod in namespaced_resources.pods:
-            if pod.spec.automount_service_account_token:
-                offenders.append(pod)
+        for sa in namespaced_resources.service_accounts:
+            if sa.metadata.name == "default":
+                if sa.automount_service_account_token != False:
+                    offenders.append("default")
+                break
 
         self.result = Result(
             status=True, 
-            resource_type="Pod",
+            resource_type="ServiceAccount",
             namespace=namespaced_resources.namespace,
-            )
+        )
         if offenders:
             self.result = Result(
                 status=False,
-                resource_type="Pod",
-                resources=[i.metadata.name for i in offenders],
+                resource_type="ServiceAccount",
+                resources=offenders,
                 namespace=namespaced_resources.namespace,
             )
 
@@ -74,25 +75,24 @@ class disable_run_as_root_user(Rule):
     url = "https://aws.github.io/aws-eks-best-practices/security/docs/iam/#run-the-application-as-a-non-root-user"
 
     def check(self, namespaced_resources: NamespacedResources):
-
         offenders = []
 
         for pod in namespaced_resources.pods:
-            security_context = pod.spec.security_context
-            containers = pod.spec.containers
-            
-            if (
-                not security_context.run_as_group
-                and not security_context.run_as_user
-            ):
-                for con in containers:
-                    security_context = con.security_context
-                    try:
-                        run_as_group = security_context.run_as_group
-                        run_as_user = security_context.run_as_user
-                    except AttributeError:
-                        offenders.append(pod)
-                
+            container_root_user = False
+            # Check container-level security context first since it takes precedence.
+            for container in pod.spec.containers:
+                if not container.security_context or \
+                    container.security_context.run_as_user in (None, 0) or \
+                    container.security_context.run_as_group in (None, 0):
+                    container_root_user = True
+                    break
+            # Check if pod-level security context is also not configured.
+            if container_root_user and (not pod.spec.security_context or \
+               pod.spec.security_context.run_as_user in (None, 0) or \
+               pod.spec.security_context.run_as_group in (None, 0)):
+                    offenders.append(pod.metadata.name)
+
+
         self.result = Result(
             status=True, 
             resource_type="Pod",
@@ -103,7 +103,7 @@ class disable_run_as_root_user(Rule):
             self.result = Result(
                 status=False,
                 resource_type="Pod",
-                resources=[i.metadata.name for i in offenders],
+                resources=offenders,
                 namespace=namespaced_resources.namespace,
             )
 

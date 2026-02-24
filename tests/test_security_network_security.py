@@ -25,7 +25,7 @@ def read_json(file_path):
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("use_encryption_with_aws_load_balancers")],
+    [(("use_encryption_with_aws_load_balancers", ["services"]))],
     indirect=["namespaced_resources"],
 )
 def test_use_encryption_with_aws_load_balancers(namespaced_resources):
@@ -62,7 +62,7 @@ def test_check_vpc_flow_logs(mocked_client):
 
 @pytest.mark.parametrize(
     "resources",
-    [("check_default_deny_policy_exists")],
+    [(("check_default_deny_policy_exists", ["network_policies"]))],
     indirect=["resources"],
 )
 def test_check_default_deny_policy_exists(resources):

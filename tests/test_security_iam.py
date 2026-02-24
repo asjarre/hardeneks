@@ -1,11 +1,17 @@
 import json
+import os
 from pathlib import Path
 from unittest.mock import patch
 
 import kubernetes
+import json
 import pytest
+from pathlib import Path
+from unittest.mock import patch, MagicMock
 
-from hardeneks.resources import NamespacedResources
+import kubernetes.client
+
+from hardeneks.resources import NamespacedResources, Resources
 
 from hardeneks.cluster_wide.security.iam import (
     restrict_wildcard_for_cluster_roles,
@@ -34,7 +40,7 @@ def read_json(file_path):
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("restrict_wildcard_for_roles")],
+    [(("restrict_wildcard_for_roles", ["roles"]))],
     indirect=["namespaced_resources"],
 )
 def test_restrict_wildcard_for_roles(namespaced_resources):
@@ -47,7 +53,7 @@ def test_restrict_wildcard_for_roles(namespaced_resources):
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("restrict_wildcard_for_cluster_roles")],
+    [(("restrict_wildcard_for_cluster_roles", ["cluster_roles"]))],
     indirect=["namespaced_resources"],
 )
 def test_restrict_wildcard_for_cluster_roles(namespaced_resources):
@@ -83,31 +89,32 @@ def test_check_endpoint_public_access(mocked_client):
 @pytest.mark.parametrize(
     "test_file,expected_status,expected_offender_count",
     [
-        # Instances with proper config (hop limit = 1 and IMDSv2 required) - should pass
         ("instance_metadata_pass.json", True, 0),
-        # Instances with issues (hop limit != 1 or IMDSv2 not required) - should fail
         ("instance_metadata_fail.json", False, 2),
     ],
 )
 @patch("boto3.client")
 def test_check_access_to_instance_profile(mocked_client, test_file, expected_status, expected_offender_count):
-    namespaced_resources = NamespacedResources(
-        "some_region", "some_context", "some_cluster", "some_ns"
+    
+    resources = Resources(
+        "some_region", "some_context", "some_cluster", []
     )
 
     test_data = (
-        Path.cwd()
-        / "tests"
-        / "data"
-        / "check_access_to_instance_profile"
+        Path.cwd() 
+        / "tests" 
+        / "data" 
+        / "check_access_to_instance_profile" 
         / test_file
     )
-
-    mocked_client.return_value.describe_instances.return_value = read_json(
-        test_data
-    )
+    data = read_json(test_data)
+    
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.return_value = [data]
+    mocked_client.return_value.get_paginator.return_value = mock_paginator
+    
     rule = check_access_to_instance_profile()
-    rule.check(namespaced_resources)
+    rule.check(resources)
     
     assert rule.result.status == expected_status
     if expected_offender_count > 0:
@@ -172,21 +179,33 @@ def test_check_aws_node_daemonset_service_account(
 
 
 @pytest.mark.parametrize(
-    "namespaced_resources",
-    [("disable_service_account_token_mounts")],
+    "namespaced_resources,namespace,expected_status",
+    [
+        (("disable_service_account_token_mounts", ["service_accounts"]), "good_namespace", True),
+        (("disable_service_account_token_mounts", ["service_accounts"]), "bad_namespace", False),
+        (("disable_service_account_token_mounts", ["service_accounts"]), "blank_namespace", False),
+    ],
     indirect=["namespaced_resources"],
 )
-def test_disable_service_account_token_mounts(namespaced_resources):
+def test_disable_service_account_token_mounts(namespaced_resources, namespace, expected_status):
+    # Filter service accounts to only those in the target namespace
+    filtered_sas = [sa for sa in namespaced_resources.service_accounts if sa.metadata.namespace == namespace]
+    namespaced_resources.service_accounts = filtered_sas
+    namespaced_resources.namespace = namespace
+    
     rule = disable_service_account_token_mounts()
     rule.check(namespaced_resources)
 
-    assert "good" not in rule.result.resources
-    assert "bad" in rule.result.resources
+    assert rule.result.status == expected_status
+    if expected_status:
+        assert "default" not in rule.result.resources
+    else:
+        assert "default" in rule.result.resources
 
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("disable_run_as_root_user")],
+    [(("disable_run_as_root_user", ["pods"]))],
     indirect=["namespaced_resources"],
 )
 def test_disable_run_as_root_user(namespaced_resources):
@@ -200,7 +219,7 @@ def test_disable_run_as_root_user(namespaced_resources):
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("disable_run_as_root_user_container")],
+    [(("disable_run_as_root_user_container", ["pods"]))],
     indirect=["namespaced_resources"],
 )
 def test_disable_run_as_root_user_container(namespaced_resources):
@@ -214,7 +233,7 @@ def test_disable_run_as_root_user_container(namespaced_resources):
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("disable_anonymous_access_for_cluster_roles")],
+    [(("disable_anonymous_access_for_cluster_roles", ["cluster_role_bindings"]))],
     indirect=["namespaced_resources"],
 )
 def test_disable_anonymous_access_for_cluster_roles(namespaced_resources):
@@ -227,7 +246,7 @@ def test_disable_anonymous_access_for_cluster_roles(namespaced_resources):
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("disable_anonymous_access_for_roles")],
+    [(("disable_anonymous_access_for_roles", ["role_bindings"]))],
     indirect=["namespaced_resources"],
 )
 def test_disable_anonymous_access_for_roles(namespaced_resources):
@@ -241,7 +260,7 @@ def test_disable_anonymous_access_for_roles(namespaced_resources):
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("use_dedicated_service_accounts_for_each_daemon_set")],
+    [(("use_dedicated_service_accounts_for_each_daemon_set", ["daemon_sets"]))],
     indirect=["namespaced_resources"],
 )
 def test_use_dedicated_service_accounts_for_each_daemon_set(
@@ -256,7 +275,7 @@ def test_use_dedicated_service_accounts_for_each_daemon_set(
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("use_dedicated_service_accounts_for_each_deployment")],
+    [(("use_dedicated_service_accounts_for_each_deployment", ["deployments"]))],
     indirect=["namespaced_resources"],
 )
 def test_use_dedicated_service_accounts_for_each_deployment(
@@ -271,7 +290,7 @@ def test_use_dedicated_service_accounts_for_each_deployment(
 
 @pytest.mark.parametrize(
     "namespaced_resources",
-    [("use_dedicated_service_accounts_for_each_stateful_set")],
+    [(("use_dedicated_service_accounts_for_each_stateful_set", ["stateful_sets"]))],
     indirect=["namespaced_resources"],
 )
 def test_use_dedicated_service_accounts_for_each_stateful_set(
