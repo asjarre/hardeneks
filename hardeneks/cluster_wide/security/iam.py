@@ -176,7 +176,7 @@ class disable_anonymous_access_for_cluster_roles(Rule):
                         subject.name == "system:unauthenticated"
                         or subject.name == "system:anonymous"
                     ):
-                        offenders.append(cluster_role_binding)
+                        offenders.append(cluster_role_binding.metadata.name)
                         break
 
         self.result = Result(status=True, resource_type="ClusterRoleBinding")
@@ -184,5 +184,5 @@ class disable_anonymous_access_for_cluster_roles(Rule):
             self.result = Result(
                 status=False,
                 resource_type="ClusterRoleBinding",
-                resources=[i.metadata.name for i in offenders],
+                resources=offenders,
             )
