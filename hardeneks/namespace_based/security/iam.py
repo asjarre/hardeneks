@@ -164,7 +164,7 @@ class use_dedicated_service_accounts_for_each_deployment(Rule):
             x: count for x, count in count.items() if count > 1
         }
 
-        for k, v in repeated_service_accounts.items():
+        for k, _ in repeated_service_accounts.items():
             for deployment in namespaced_resources.deployments:
                 if k == deployment.spec.template.spec.service_account_name:
                     offenders.append(deployment)
@@ -183,9 +183,7 @@ class use_dedicated_service_accounts_for_each_deployment(Rule):
             )
 
 
-class use_dedicated_service_accounts_for_each_stateful_set(
-    Rule,
-):
+class use_dedicated_service_accounts_for_each_stateful_set(Rule):
     _type = "namespace_based"
     pillar = "security"
     section = "iam"
@@ -206,10 +204,10 @@ class use_dedicated_service_accounts_for_each_stateful_set(
             x: count for x, count in count.items() if count > 1
         }
 
-        for k, v in repeated_service_accounts.items():
-            for deployment in namespaced_resources.stateful_sets:
-                if k == deployment.spec.template.spec.service_account_name:
-                    offenders.append(deployment)
+        for k, _ in repeated_service_accounts.items():
+            for stateful_set in namespaced_resources.stateful_sets:
+                if k == stateful_set.spec.template.spec.service_account_name:
+                    offenders.append(stateful_set)
 
         self.result = Result(
             status=True,
@@ -225,9 +223,7 @@ class use_dedicated_service_accounts_for_each_stateful_set(
             )
 
 
-class use_dedicated_service_accounts_for_each_daemon_set(
-    Rule,
-):
+class use_dedicated_service_accounts_for_each_daemon_set(Rule):
     _type = "namespace_based"
     pillar = "security"
     section = "iam"
@@ -248,10 +244,10 @@ class use_dedicated_service_accounts_for_each_daemon_set(
             x: count for x, count in count.items() if count > 1
         }
 
-        for k, v in repeated_service_accounts.items():
-            for deployment in namespaced_resources.daemon_sets:
-                if k == deployment.spec.template.spec.service_account_name:
-                    offenders.append(deployment)
+        for k, _ in repeated_service_accounts.items():
+            for daemon_set in namespaced_resources.daemon_sets:
+                if k == daemon_set.spec.template.spec.service_account_name:
+                    offenders.append(daemon_set)
 
         self.result = Result(
             status=True, 
