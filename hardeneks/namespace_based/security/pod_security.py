@@ -150,13 +150,12 @@ class check_read_only_root_file_system(Rule):
         offenders = []
         for pod in namespaced_resources.pods:
             for container in pod.spec.containers:
-                if container.security_context is None:
-                    offenders.append(pod)
                 if (
-                    container.security_context
-                    and not container.security_context.read_only_root_filesystem
+                    container.security_context is None
+                    or not container.security_context.read_only_root_filesystem
                 ):
-                    offenders.append(pod)
+                    offenders.append(pod.metadata.name)
+                    break
         self.result = Result(
             status=True, 
             resource_type="Pod",
@@ -166,6 +165,6 @@ class check_read_only_root_file_system(Rule):
             self.result = Result(
                 status=False,
                 resource_type="Pod",
-                resources=[i.metadata.name for i in offenders],
+                resources=offenders,
                 namespace=namespaced_resources.namespace,
             )
